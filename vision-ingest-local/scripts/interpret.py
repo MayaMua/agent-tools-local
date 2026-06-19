@@ -40,6 +40,24 @@ def load_env_file():
             return
 
 
+def resolve_server_url(backend, cli_url=None):
+    """Pick the server URL for the chosen backend.
+
+    Backend-specific env vars take precedence:
+      lmstudio -> LMS_SERVER_URL, ollama -> Ollama_SERVER_URL.
+    Falls back to the legacy VISION_SERVER_URL, then a localhost default.
+    """
+    if cli_url:
+        return cli_url
+    if backend == "ollama":
+        return (os.environ.get("Ollama_SERVER_URL")
+                or os.environ.get("VISION_SERVER_URL")
+                or "http://localhost:11434")
+    return (os.environ.get("LMS_SERVER_URL")
+            or os.environ.get("VISION_SERVER_URL")
+            or "http://localhost:1234")
+
+
 def encode_image(image_path, max_dim=2048):
     """Load an image, optionally downsize, return (base64_str, mime_type).
 
@@ -176,7 +194,7 @@ def main():
     load_env_file()
 
     backend = args.backend or os.environ.get("VISION_BACKEND", "ollama")
-    url = args.url or os.environ.get("VISION_SERVER_URL", "")
+    url = resolve_server_url(backend, args.url)
     model = args.model or os.environ.get("VISION_MODEL", "")
     prompt = args.prompt or os.environ.get(
         "VISION_DEFAULT_PROMPT", "Describe this image in detail."
@@ -184,8 +202,6 @@ def main():
     max_tokens = args.max_tokens or int(os.environ.get("VISION_MAX_TOKENS", "1024"))
     temperature = args.temperature or float(os.environ.get("VISION_TEMPERATURE", "0.2"))
 
-    if not url:
-        url = "http://localhost:11434" if backend == "ollama" else "http://localhost:1234"
     if not model:
         model = "glm-ocr:latest" if backend == "ollama" else "allenai/olmocr-2-7b"
 

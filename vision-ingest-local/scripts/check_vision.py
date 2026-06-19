@@ -213,6 +213,24 @@ def check_lmstudio(url, model):
 
 # ── main ────────────────────────────────────────────────────────────────────
 
+def resolve_server_url(backend, cli_url=None):
+    """Pick the server URL for the chosen backend.
+
+    Backend-specific env vars take precedence:
+      lmstudio -> LMS_SERVER_URL, ollama -> Ollama_SERVER_URL.
+    Falls back to the legacy VISION_SERVER_URL, then a localhost default.
+    """
+    if cli_url:
+        return cli_url
+    if backend == "ollama":
+        return (os.environ.get("Ollama_SERVER_URL")
+                or os.environ.get("VISION_SERVER_URL")
+                or "http://localhost:11434")
+    return (os.environ.get("LMS_SERVER_URL")
+            or os.environ.get("VISION_SERVER_URL")
+            or "http://localhost:1234")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Check if a local LLM model supports vision"
@@ -226,11 +244,9 @@ def main():
     load_env_file()
 
     backend = args.backend or os.environ.get("VISION_BACKEND", "ollama")
-    url = args.url or os.environ.get("VISION_SERVER_URL", "")
+    url = resolve_server_url(backend, args.url)
     model = args.model or os.environ.get("VISION_MODEL", "")
 
-    if not url:
-        url = "http://localhost:11434" if backend == "ollama" else "http://localhost:1234"
     if not model:
         model = "glm-ocr:latest" if backend == "ollama" else "allenai/olmocr-2-7b"
 

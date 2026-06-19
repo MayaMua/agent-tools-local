@@ -244,6 +244,26 @@ def discover_lmstudio(url):
     return vision_models
 
 
+# ── helpers ─────────────────────────────────────────────────────────────────
+
+def resolve_server_url(backend, cli_url=None):
+    """Pick the server URL for the chosen backend.
+
+    Backend-specific env vars take precedence:
+      lmstudio -> LMS_SERVER_URL, ollama -> Ollama_SERVER_URL.
+    Falls back to the legacy VISION_SERVER_URL, then a localhost default.
+    """
+    if cli_url:
+        return cli_url
+    if backend == "ollama":
+        return (os.environ.get("Ollama_SERVER_URL")
+                or os.environ.get("VISION_SERVER_URL")
+                or "http://localhost:11434")
+    return (os.environ.get("LMS_SERVER_URL")
+            or os.environ.get("VISION_SERVER_URL")
+            or "http://localhost:1234")
+
+
 # ── main ────────────────────────────────────────────────────────────────────
 
 def main():
@@ -256,12 +276,11 @@ def main():
     load_env_file()
 
     backend = args.backend or os.environ.get("VISION_BACKEND", "ollama")
+    url = resolve_server_url(backend, args.url)
 
     if backend == "ollama":
-        url = args.url or os.environ.get("VISION_SERVER_URL", "http://localhost:11434")
         discover_ollama(url)
     elif backend == "lmstudio":
-        url = args.url or os.environ.get("VISION_SERVER_URL", "http://localhost:1234")
         discover_lmstudio(url)
 
 

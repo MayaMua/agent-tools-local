@@ -58,12 +58,15 @@ Edit `.env` to match your setup:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `VISION_BACKEND` | `ollama` or `lmstudio` | `lmstudio` |
-| `VISION_SERVER_URL` | Server base URL | `http://localhost:11234` (LM Studio) / `http://localhost:11434` (Ollama) |
 | `VISION_MODEL` | Vision-capable model name | `allenai/olmocr-2-7b` (LM Studio) / `glm-ocr:latest` (Ollama) |
 | `VISION_DEFAULT_PROMPT` | Prompt used when none is given | `Describe this image in detail.` |
-| `VISION_MAX_TOKENS` | Max response length | `1024` |
+| `VISION_MAX_TOKENS` | Max response length. Bump to 2048+ for reasoning models (gemma-4). | `1024` |
 | `VISION_TEMPERATURE` | 0.0–1.0 (lower = more factual) | `0.1` |
+| `LMS_SERVER_URL` | LM Studio server URL (backend-specific, preferred) | `http://localhost:11234` |
+| `Ollama_SERVER_URL` | Ollama server URL (backend-specific, preferred) | `http://localhost:11434` |
+| `VISION_SERVER_URL` | Legacy URL fallback — use `LMS_SERVER_URL` / `Ollama_SERVER_URL` instead | — |
 
+URL resolution: backend-specific env var → legacy `VISION_SERVER_URL` → localhost default.
 Every setting is also a CLI flag, so `.env` is optional.
 
 ### Step 2 — Install the skill
