@@ -61,28 +61,56 @@ call: check_health
 Reports ffmpeg/ffprobe, yt-dlp version, CUDA GPU + Qwen3-ASR availability, and whether
 CookieCloud is configured. Run this first if anything misbehaves.
 
-### Step 2 — Run the pipeline
+### Step 2 — Run the pipeline (stage in `/tmp`, then copy to the destination)
 
-For most requests ("get me the transcript of this video"), use the all-in-one tool:
+**Always process into a `/tmp` staging directory, then copy the finished artifacts to
+the destination the user asked for.** Downloads and ASR write large intermediate files
+(full audio, plus 10-min segment splits for long audio); keeping that churn on fast local
+`/tmp` — instead of the user's project tree or a network-mounted folder — is faster and
+leaves their workspace clean. Only the final results get copied out.
+
+**1. Decide the destination.** Use the directory the user named ("save it to
+`~/notes/talks`", "put the transcript in this folder"). If they didn't specify one, ask —
+or default to `./output` in the current directory and tell them where it landed.
+
+**2. Process into `/tmp`.** For most requests ("get me the transcript of this video"), use
+the all-in-one tool with a `/tmp` staging dir:
 
 ```
 call: process_url
   url: https://www.youtube.com/watch?v=...
-  output_dir: ./output   # optional; this is the default
+  output_dir: /tmp/media-process      # staging — always under /tmp
   video: false                        # set true to also keep the .mp4
 ```
 
 `process_url` does the full chain: **download audio → try site subtitles → fall back to
 local Qwen3-ASR** (auto-splitting audio longer than 12 min into 10-min segments). It
 reuses already-downloaded artifacts, so re-running resumes cleanly. The response reports
-`transcript_method` (`subtitles` / `asr` / `none`), `transcript_chars`, and a preview.
+the per-video folder under `output_dir`, plus `transcript_method` (`subtitles` / `asr` /
+`none`), `transcript_chars`, and a preview.
+
+**3. Copy the result to the destination.** The tool returns `output_dir` — the per-video
+folder, e.g. `/tmp/media-process/20260606_Some Title`. Copy that whole folder into the
+user's destination, then report the **destination** paths (not the `/tmp` ones):
+
+```bash
+mkdir -p "<destination>"
+cp -r "/tmp/media-process/20260606_Some Title" "<destination>/"
+```
+
+The `/tmp` copy can be left in place (it makes re-runs resume instantly) or cleaned up once
+the user has their files.
 
 ### Individual steps
+
+Same staging rule applies: pass `output_dir: /tmp/media-process`, then copy the result to
+the user's destination.
 
 **Download only (no ASR):**
 ```
 call: download_media
   url: https://...
+  output_dir: /tmp/media-process   # staging — always under /tmp
   audio: true          # default
   video: true          # also keep the video file
   transcript: true     # grab site-provided subtitles if any
@@ -92,8 +120,11 @@ call: download_media
 ```
 call: transcribe_audio
   audio_path: /absolute/path/to/audio.mp3
+  output_dir: /tmp/media-process   # staging; copy transcript.txt to the destination after
   language: zh          # optional hint; omit for auto-detect
 ```
+(`audio_path` may be anywhere — the staging rule is about where *outputs* land. After it
+returns, copy the produced `transcript.txt` to the user's destination.)
 
 > **Language hint:** pass an ISO code (`zh`, `en`, `yue`, `ja`, …) **or** the
 > canonical name (`Chinese`, `English`, `Cantonese`, …) — codes are mapped
@@ -132,17 +163,20 @@ site-subtitle downloads are not supported — transcripts come from ASR.
 
 ## Common Requests → Exact Tool Calls
 
-**"Get the transcript of this video"** → `process_url(url=...)`
+> All of these stage into `/tmp/media-process` first, then copy the result to the user's
+> destination (Step 2). `output_dir=/tmp/media-process` is omitted below for brevity — add it.
 
-**"Download the audio of this YouTube video"** → `download_media(url=..., audio=True, transcript=False)`
+**"Get the transcript of this video"** → `process_url(url=...)` → copy to destination
 
-**"Download the video file too"** → `process_url(url=..., video=True)` or `download_media(url=..., video=True)`
+**"Download the audio of this YouTube video"** → `download_media(url=..., audio=True, transcript=False)` → copy to destination
 
-**"Transcribe this mp3 / recording"** → `transcribe_audio(audio_path=...)`
+**"Download the video file too"** → `process_url(url=..., video=True)` or `download_media(url=..., video=True)` → copy to destination
 
-**"Transcribe this Chinese talk"** → `transcribe_audio(audio_path=..., language="zh")`
+**"Transcribe this mp3 / recording"** → `transcribe_audio(audio_path=...)` → copy `transcript.txt` to destination
 
-**"Process all these links"** → call `process_url` once per URL (read the list, loop), then `unload_asr` when finished
+**"Transcribe this Chinese talk"** → `transcribe_audio(audio_path=..., language="zh")` → copy to destination
+
+**"Process all these links"** → call `process_url` once per URL (read the list, loop), copy each result to the destination, then `unload_asr` when finished
 
 **"I'm done" / finished transcribing** → `unload_asr()` — free the GPU
 

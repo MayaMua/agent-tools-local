@@ -131,12 +131,17 @@ text = transcribe("/path/to/audio.mp3", language="en")
 ## Output structure
 
 ```
-./output/
+<output_dir>/
 └── <YYYYMMDD>_<video_title>/
     ├── metadata.json       # title, author, tags, duration, URL
     ├── audio.mp3           # downloaded audio
     └── transcript.txt      # full transcription (UTF-8 text)
 ```
+
+> **Agent staging convention:** when driven via the skill, the agent stages downloads and
+> transcription under `/tmp/media-process` (fast local disk, keeps the workspace clean),
+> then copies the finished per-video folder to the destination you specify. See
+> [`skill/SKILL.md`](skill/SKILL.md) § Step 2.
 
 ---
 
@@ -168,7 +173,6 @@ media-process-local/
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — the underlying downloader
 - [Qwen3-ASR](https://huggingface.co/Qwen) — the local speech-to-text model
-- [`mineru-local`](../mineru-local) — sibling skill: local document → Markdown parsing
 
 ---
 

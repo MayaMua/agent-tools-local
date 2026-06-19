@@ -3,6 +3,10 @@
 Base: local stdio MCP server (`mcp_media_process_local.server`)
 No authentication required. CookieCloud credentials (optional) are read from `.env`.
 
+> **Staging convention:** pass `output_dir=/tmp/media-process` to the download/transcribe
+> tools so all heavy intermediate I/O lands on fast local `/tmp`, then copy the finished
+> per-video folder to the user's destination. See `SKILL.md` § Step 2.
+
 ---
 
 ## check_health
@@ -50,7 +54,7 @@ Download audio, video, and/or site-provided subtitles from a URL. Does **not** r
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `url` | string | required | Media page URL (YouTube, Bilibili, any yt-dlp site) |
-| `output_dir` | string | `./output` | Base dir for the per-video output folder |
+| `output_dir` | string | `./output` | Base dir for the per-video output folder. **Use `/tmp/media-process` for staging, then copy out** (see convention above) |
 | `audio` | boolean | `true` | Download audio |
 | `video` | boolean | `false` | Also download the video file |
 | `transcript` | boolean | `true` | Download site-provided subtitles as `transcript.txt` |
@@ -86,7 +90,7 @@ Transcribe a local audio file to text with Qwen3-ASR (local GPU). Audio longer t
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `audio_path` | string | required | Absolute path to an audio file |
-| `output_dir` | string | the file's dir | Where to write `transcript.txt` + segment files |
+| `output_dir` | string | the file's dir | Where to write `transcript.txt` + segment files. **Use `/tmp/media-process` for staging, then copy `transcript.txt` out** |
 | `language` | string | `null` | Language hint — ISO code (`"zh"`, `"en"`, `"yue"`, `"ja"`, …) or canonical name (`"Chinese"`, `"English"`, …). Codes are mapped automatically. Omit to auto-detect |
 | `overwrite` | boolean | `false` | If `transcript.txt` exists, error unless `true` |
 
@@ -118,7 +122,7 @@ Full pipeline for one URL: download audio → try site subtitles → fall back t
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `url` | string | required | Media page URL |
-| `output_dir` | string | `./output` | Base dir for the per-video output folder |
+| `output_dir` | string | `./output` | Base dir for the per-video output folder. **Use `/tmp/media-process` for staging, then copy out** (see convention above) |
 | `video` | boolean | `false` | Also download the video file (mp4) |
 | `language` | string | `null` | Language hint for the ASR fallback — ISO code (`"zh"`, `"en"`, …) or canonical name. Omit to auto-detect |
 | `markdown` | boolean | `false` | Also write a combined `{title}.md` with metadata + transcript |
