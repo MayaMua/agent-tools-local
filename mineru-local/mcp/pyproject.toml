@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-mineru-local"
+version = "1.0.0"
+description = "MCP server for local MinerU document parsing with GPU acceleration (CUDA + MLX)"
+requires-python = ">=3.10,<3.14"
+license = { text = "MIT" }
+dependencies = [
+    "fastmcp>=2.0.0",
+    "mineru[core]>=3.0.0",
+]
+
+[project.optional-dependencies]
+mlx = ["mineru[mlx]>=3.0.0"]
+cuda = ["torch>=2.0.0"]
+
+[project.scripts]
+mcp-mineru-local = "mcp_mineru_local.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_mineru_local"]
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 100
