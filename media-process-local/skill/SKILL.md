@@ -80,26 +80,32 @@ the all-in-one tool with a `/tmp` staging dir:
 call: process_url
   url: https://www.youtube.com/watch?v=...
   output_dir: /tmp/media-process      # staging — always under /tmp
+  markdown: true                      # produce the .md transcript to copy out
   video: false                        # set true to also keep the .mp4
 ```
 
 `process_url` does the full chain: **download audio → try site subtitles → fall back to
 local Qwen3-ASR** (auto-splitting audio longer than 12 min into 10-min segments). It
 reuses already-downloaded artifacts, so re-running resumes cleanly. The response reports
-the per-video folder under `output_dir`, plus `transcript_method` (`subtitles` / `asr` /
-`none`), `transcript_chars`, and a preview.
+the per-video folder under `output_dir`, `markdown_path`, plus `transcript_method`
+(`subtitles` / `asr` / `none`), `transcript_chars`, and a preview.
 
-**3. Copy the result to the destination.** The tool returns `output_dir` — the per-video
-folder, e.g. `/tmp/media-process/20260606_Some Title`. Copy that whole folder into the
-user's destination, then report the **destination** paths (not the `/tmp` ones):
+**3. Move only what the user asked for.** Everything stays in `/tmp` by default. Then:
+
+- **If they asked to save specific file(s)** (e.g. "save the transcript as `.md`"), move
+  just those from `/tmp` to the destination. Use `markdown_path` for the `.md`, or copy
+  `transcript.txt` / `audio.mp3` as requested. Report the **destination** paths.
+- **If they didn't ask to save anything** (e.g. "what does this video say?"), just read
+  the transcript from `/tmp` and answer — copy nothing out.
 
 ```bash
 mkdir -p "<destination>"
-cp -r "/tmp/media-process/20260606_Some Title" "<destination>/"
+mv "<markdown_path>" "<destination>/<slug>.md"   # only the requested file(s)
 ```
 
-The `/tmp` copy can be left in place (it makes re-runs resume instantly) or cleaned up once
-the user has their files.
+Never copy the whole staged folder into a wiki / vault / repo. Intermediate artifacts
+(`audio.mp3`, `metadata.json`, `transcript.txt`, `audio_segments/`) stay in `/tmp` — the
+copy can be left there (re-runs resume instantly) or cleaned up afterward.
 
 ### Individual steps
 
